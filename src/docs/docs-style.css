@@ -1,0 +1,57 @@
+/* documentation.css */
+section {
+    margin: 20px;
+  }
+  
+  h1, h2 {
+    color: #ffffff;
+    font-weight: bold;
+  }
+  
+  ul {
+    padding-left: 20px;
+    color: #f5f5f5;
+    list-style-type: none;
+    padding-left: 0;
+
+  }
+
+  li {
+    margin-bottom: 10px;
+  }
+  
+  li > ul {
+    margin-left: 20px;
+  }
+
+  .file-description {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+ .filename {
+    
+  }
+  
+ .description {
+    font-size: 14px;
+    color: wheat;
+  }
+
+  p {
+    color: #f5f5f5;
+  }
+
+  a {
+    color: #b3ffb4;
+    text-decoration: underline;
+  }
+  
+  pre {
+    background-color: #f5f5f5;
+    border-radius: 5px;
+    padding: 10px;
+    overflow-x: auto;
+  }
+  
