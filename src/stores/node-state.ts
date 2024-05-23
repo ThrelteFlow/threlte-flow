@@ -29,7 +29,6 @@ export const initialNodes: Node[] = [
       label: 'colorpicker',
       type: 'colorpicker'
     },
-    class: 'w-[200px] lg:w-[100px]'
   },
   {
     id: 'object',
@@ -40,7 +39,6 @@ export const initialNodes: Node[] = [
       label: 'object selector',
       type: 'objectselector'
     },
-    class: 'w-[150px]'
   }];
 
 const edgeStyle = 'stroke:#D2D2D2; stroke-width:2;';
