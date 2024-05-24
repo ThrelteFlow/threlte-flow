@@ -7,80 +7,87 @@
     const isValidConnection: IsValidConnection = (connection) => connection.target === 'B';
     const nodes = useNodes();
     const edges = useEdges();
-  
-  let myItems = [
 
-    ];
+    let prevColor, prevSelectedObject;
+    let myItems = [];
 
-    let selectedOption;
+    let selectedOption, object;
+    let prevSelection = ""; // Track the previous selection
+    let isConnectedPrev = false; // Track the previous connectivity status
+    let prevSourcePickerColor = null; // Track the previous source picker color
+
     $: {
-        if(selectedOption)
-        if(selectedOption != "-None-")
-        {
-          console.log(selectedOption)
-          let object = $globalScene.getObjectByProperty( 'uuid' , selectedOption);
+      if(selectedOption!== prevSelection) { // Only execute if the selection has changed
+        console.log("prevSelection " + prevSelection + " is not selectedOption " + selectedOption)
+        if(selectedOption && selectedOption != "-None-") {
+          object = $globalScene.getObjectByProperty( 'uuid' , selectedOption);
 
-          // Subscribe to changes in the flow's state
-          const unsubscribe = nodes.subscribe(newNodes => {
-            // Check if a specific node is already connected
-            const sourceNode = newNodes.find(node => node.data.label === label);
-            const nodeId = sourceNode?.id; //'object';
-            // const nodeId = label; //labels are unique as a simple workaround as cannot use useNodeId() in Svelte
+            // Subscribe to changes in the flow's state
+            const unsubscribe = nodes.subscribe(newNodes => {
+              // Check if a specific node is already connected
+              const sourceNode = newNodes.find(node => node.data.label === label);
+              const nodeId = sourceNode?.id; //labels are unique as a simple workaround as cannot use useNodeId() in Svelte
 
-            edges.subscribe(newEdges => {
-              console.log(newEdges)
-            const isConnected = newEdges.some(edge => edge.source === nodeId || edge.target === nodeId);
+              edges.subscribe(newEdges => {
+                const isConnected = newEdges.some(edge => edge.source === nodeId || edge.target === nodeId);
+                const sourcePickerId = newEdges.find(edge => edge.target === nodeId)?.source
+                const sourcePickerData = newNodes.find(node => node.id === sourcePickerId);
 
-            console.log("edge source")
-            console.log(newEdges.find(edge => edge.target === nodeId))
-            const sourcePickerId = newEdges.find(edge => edge.target === nodeId)?.source
-            console.log(sourcePickerId)
-            
-            const sourcePickerData = newNodes.find(node => node.id === sourcePickerId);
-            console.log("sourcePickerData")
-            console.log(sourcePickerData)
-                
+                // subscription to edges within the reactive block is being re-evaluated upon node movement
+                if (isConnected!== isConnectedPrev || selectedOption!== prevSelection || sourcePickerData?.data.color!== prevSourcePickerColor) {
+                  isConnectedPrev = isConnected; // Update the previous connectivity status
+                  prevSourcePickerColor = sourcePickerData?.data.color; // Update the previous color value
 
-                if (isConnected) {
-                  object.material.color.set(sourcePickerData?.data.color);
-                  console.log("settings color:")
-                  console.log(sourcePickerData?.data.color)
+                  if (isConnected) {
+                    // Reset the color of previously selected object to original state
+                    if (prevSelectedObject!== object) {
+                          if (prevSelectedObject)
+                          prevSelectedObject.material.color = prevColor.clone()
+                          prevColor = object.material.color.clone()
+                        }
+                        prevSelectedObject = object;
 
-                  console.log("searching for new nodes:")
-                  console.log(newNodes)
-
-                  console.log(`Node ${nodeId} is already connected.`);
-                } else {
-                  console.log(`Node ${nodeId} is not connected.`);
-                }
-
-                })
-          });
-        // Cleanup on unmount
-        // return () => unsubscribe();
+                    object.material.color.set(sourcePickerData?.data.color);
+                  } else {
+                    console.log(`Node ${nodeId} is not connected.`);
+                  }
+              }
+              })
+            });
+          // Cleanup on unmount
+          // return () => unsubscribe();
+        } else if (selectedOption === "-None-") {
+          // Reset the color of the previously selected object to its original state
+          if (prevSelectedObject) {
+              prevSelectedObject.material.color = prevColor.clone();
+              prevColor = null; // Optionally set prevColor to null or a default color
+              prevSelectedObject = null; // Set prevSelectedObject to null to indicate no object is selected
+          }
         }
+        prevSelection = selectedOption; // Update the previous selection
+      }
     }
 
 
-$: {
-  if($objectsGroup)
-  $objectsGroup.children.forEach( (child) => {
-    console.log("AND PASSED!" + child.uuid)
-    //some method is used to check if myItems already
-    //contains an item with an id that matches child.uuid.
-    if (myItems.length != $objectsGroup.children.length) //clumsy way of avoiding error when dragging
-    if (!myItems.some(item => item.id === child.uuid))
-    updateMyItems(child.uuid, child.name);
-})
-}
+    $: {
+      if($objectsGroup)
+      $objectsGroup.children.forEach( (child) => {
+        console.log("AND PASSED!" + child.uuid)
+        //some method is used to check if myItems already
+        //contains an item with an id that matches child.uuid.
+        if (myItems.length != $objectsGroup.children.length) //clumsy way of avoiding error when dragging
+        if (!myItems.some(item => item.id === child.uuid))
+        updateMyItems(child.uuid, child.name);
+    })
+    }
 
-function updateMyItems(uuid,name){
-  myItems = [...myItems, {id: uuid, name: name}]
-  // myItems.push({id: uuid, name: name})
-}
+    function updateMyItems(uuid,name){
+      myItems = [...myItems, {id: uuid, name: name}]
+      // myItems.push({id: uuid, name: name})
+    }
     type $$Props = NodeProps;
     export let data: NodeData;
-    const { label, flowState, type } = data;
+    const { label, type } = data;
     
     export let props: NodeProps;
 
@@ -91,17 +98,13 @@ function updateMyItems(uuid,name){
   
   <NodeWrapper {label} {type}>
     <div class="flex items-center space-x-2">
-      
-
-    <select bind:value={selectedOption}>
-      <option>-None-</option>
-    {#each myItems as option}
-      <option value={option.id}>{option.name}</option>
-    {/each}
-    </select>
-
-    <!-- <p>Selected Option: {selectedOption? selectedOption : 'None'}</p> -->
-
+      <select bind:value={selectedOption}>
+        <option>-None-</option>
+      {#each myItems as option}
+        <option value={option.id}>{option.name}</option>
+      {/each}
+      </select>
     </div>
+    <!-- <p>Selected Option: {selectedOption? selectedOption : 'None'}</p> -->
     <Handle type="target" position={Position.Left} />
   </NodeWrapper>
