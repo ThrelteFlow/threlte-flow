@@ -14,7 +14,7 @@
     let selectedOption, object;
     let prevSelection = ""; // Track the previous selection
     let isConnectedPrev = false; // Track the previous connectivity status
-
+    let prevSourcePickerColor = null; // Track the previous source picker color
 
     $: {
       if(selectedOption!== prevSelection) { // Only execute if the selection has changed
@@ -30,11 +30,13 @@
 
               edges.subscribe(newEdges => {
                 const isConnected = newEdges.some(edge => edge.source === nodeId || edge.target === nodeId);
+                const sourcePickerId = newEdges.find(edge => edge.target === nodeId)?.source
+                const sourcePickerData = newNodes.find(node => node.id === sourcePickerId);
+
                 // subscription to edges within the reactive block is being re-evaluated upon node movement
-                if (isConnected!== isConnectedPrev || selectedOption!== prevSelection) {
+                if (isConnected!== isConnectedPrev || selectedOption!== prevSelection || sourcePickerData?.data.color!== prevSourcePickerColor) {
                   isConnectedPrev = isConnected; // Update the previous connectivity status
-                  const sourcePickerId = newEdges.find(edge => edge.target === nodeId)?.source
-                  const sourcePickerData = newNodes.find(node => node.id === sourcePickerId);
+                  prevSourcePickerColor = sourcePickerData?.data.color; // Update the previous color value
 
                   if (isConnected) {
                     // Reset the color of previously selected object to original state
@@ -44,6 +46,7 @@
                           prevColor = object.material.color.clone()
                         }
                         prevSelectedObject = object;
+
                     object.material.color.set(sourcePickerData?.data.color);
                   } else {
                     console.log(`Node ${nodeId} is not connected.`);
