@@ -8,37 +8,61 @@
     const nodes = useNodes();
     const edges = useEdges();
 
-    let prevColor, prevSelectedObject
+    let prevColor, prevSelectedObject;
     let myItems = [];
 
-    let selectedOption;
+    let selectedOption, object;
+    let prevSelection = ""; // Track the previous selection
+    let isConnectedPrev = false; // Track the previous connectivity status
+
 
     $: {
+      if(selectedOption!== prevSelection) { // Only execute if the selection has changed
+        console.log("prevSelection " + prevSelection + " is not selectedOption " + selectedOption)
         if(selectedOption && selectedOption != "-None-") {
-          let object = $globalScene.getObjectByProperty( 'uuid' , selectedOption);
+          object = $globalScene.getObjectByProperty( 'uuid' , selectedOption);
 
-          // Subscribe to changes in the flow's state
-          const unsubscribe = nodes.subscribe(newNodes => {
-            // Check if a specific node is already connected
-            const sourceNode = newNodes.find(node => node.data.label === label);
-            const nodeId = sourceNode?.id; //labels are unique as a simple workaround as cannot use useNodeId() in Svelte
+            // Subscribe to changes in the flow's state
+            const unsubscribe = nodes.subscribe(newNodes => {
+              // Check if a specific node is already connected
+              const sourceNode = newNodes.find(node => node.data.label === label);
+              const nodeId = sourceNode?.id; //labels are unique as a simple workaround as cannot use useNodeId() in Svelte
 
-            edges.subscribe(newEdges => {
-              const isConnected = newEdges.some(edge => edge.source === nodeId || edge.target === nodeId);
-              console.log(newEdges.find(edge => edge.target === nodeId))
-              const sourcePickerId = newEdges.find(edge => edge.target === nodeId)?.source
-              const sourcePickerData = newNodes.find(node => node.id === sourcePickerId);
+              edges.subscribe(newEdges => {
+                const isConnected = newEdges.some(edge => edge.source === nodeId || edge.target === nodeId);
+                // subscription to edges within the reactive block is being re-evaluated upon node movement
+                if (isConnected!== isConnectedPrev || selectedOption!== prevSelection) {
+                  isConnectedPrev = isConnected; // Update the previous connectivity status
+                  const sourcePickerId = newEdges.find(edge => edge.target === nodeId)?.source
+                  const sourcePickerData = newNodes.find(node => node.id === sourcePickerId);
 
-              if (isConnected) {
-                object.material.color.set(sourcePickerData?.data.color);
-              } else {
-                console.log(`Node ${nodeId} is not connected.`);
+                  if (isConnected) {
+                    // Reset the color of previously selected object to original state
+                    if (prevSelectedObject!== object) {
+                          if (prevSelectedObject)
+                          prevSelectedObject.material.color = prevColor.clone()
+                          prevColor = object.material.color.clone()
+                        }
+                        prevSelectedObject = object;
+                    object.material.color.set(sourcePickerData?.data.color);
+                  } else {
+                    console.log(`Node ${nodeId} is not connected.`);
+                  }
               }
-            })
-          });
-        // Cleanup on unmount
-        // return () => unsubscribe();
+              })
+            });
+          // Cleanup on unmount
+          // return () => unsubscribe();
+        } else if (selectedOption === "-None-") {
+          // Reset the color of the previously selected object to its original state
+          if (prevSelectedObject) {
+              prevSelectedObject.material.color = prevColor.clone();
+              prevColor = null; // Optionally set prevColor to null or a default color
+              prevSelectedObject = null; // Set prevSelectedObject to null to indicate no object is selected
+          }
         }
+        prevSelection = selectedOption; // Update the previous selection
+      }
     }
 
 
